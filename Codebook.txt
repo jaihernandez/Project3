@@ -1,0 +1,86 @@
+
+This codebook describes all the data transformations and variables that were changed for this project (in run_analysis.R), as well as all other relevant information
+
+	1. Download and extract zip file called 'UCI HAR Dataset.zip' (if not already downloaded) in the deafult/pre-established working directory
+		Code:
+			zipurl = 'https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip'
+			if (!file.exists('./UCI HAR Dataset.zip')){
+	    			download.file(zipurl,'./UCI HAR Dataset.zip', mode = 'wb')
+    				unzip("UCI HAR Dataset.zip", exdir = getwd())
+			}
+			
+	2. Read in test and traning data and assign it to local variable names - assing tidy names to variables as well
+		Code (comments start with #):
+            
+            #features contain all mearument names
+			features <- read.table('./UCI HAR Dataset/features.txt')
+			features <- as.character(features[,2])
+            
+            #train_data_x contains all the train data
+			train_data_x <- read.table('./UCI HAR Dataset/train/X_train.txt')
+			
+			#train_data_activ and train_data_sub contain the activity and subject codes correspondingly for the training data
+			train_data_activ <- read.table('./UCI HAR Dataset/train/y_train.txt')
+			train_data_sub <- read.table('./UCI HAR Dataset/train/subject_train.txt')
+
+            #data.train is the training data combined with the proper activity and subject names as well as the actual feature names
+			data.train <-  as.data.frame(cbind(train_data_sub, train_data_activ, train_data_x))
+
+			names(data.train) <- c(c('subject', 'activity'), features)
+
+            #test_data_x contains all the test data
+			test_data_x <- read.table('./UCI HAR Dataset/test/X_test.txt')
+			
+			#test_data_activ and test_data_sub contain the activity and subject codes correspondingly for the test data
+			test_data_activ <- read.table('./UCI HAR Dataset/test/y_test.txt')
+			test_data_sub <- read.table('./UCI HAR Dataset/test/subject_test.txt')
+
+            #data.test is the test data combined with the proper activity and subject names as well as the actual feature names
+			data.test <-  as.data.frame(cbind(test_data_sub, test_data_activ, test_data_x))
+			names(data.test) <- c(c('subject', 'activity'), features)]
+
+	3. Change main dataframe names into proper tidy names
+		Code:
+		    #Combined training and test data
+			main_DF <- rbind(data.train, data.test)
+
+	4. Extract only mean and Standard Deviation-related data measurements
+		Code:
+		    #my_variables includes a list of all the measurements that pertain to a mean or SD
+			my_variables <- grep('mean|std', names(main_DF))
+
+            #final_DF is the final dataframe only using the mean and SD measurements
+			final_DF <- main_DF[,c(1,2,my_variables)]
+
+	5. Assign activity labels to main data frame
+		Code:
+		    #activity_labels are a list with the activity labels  
+			activity_labels <- read.table('./UCI HAR Dataset/activity_labels.txt')
+			activity_labels <- as.character(activity_labels[,2])
+			
+			#The final_DF$activity column is changed into the activity labels from activity_labels
+			final_DF$activity <- activity_labels[final_DF$activity]
+
+	6. Change data names for final dataframe to tidy names
+		Code:
+			new_names <- names(final_DF)
+			new_names <- gsub("[(][)]", "", new_names)
+			new_names <- gsub("^t", "TimeDomain_", new_names)
+			new_names <- gsub("^f", "FrequencyDomain_", new_names)
+			new_names <- gsub("Acc", "Accelerometer", new_names)
+			new_names <- gsub("Gyro", "Gyroscope", new_names)
+			new_names <- gsub("Mag", "Magnitude", new_names)
+			new_names <- gsub("-mean-", "_Mean_", new_names)
+			new_names <- gsub("-std-", "_StandardDeviation_", new_names)
+			new_names <- gsub("-", "_", new_names)
+			names(final_DF) <- new_names
+
+	7. Create average dataset and save as text file
+		Code:
+		    #avg_dataset is the final datast which takes the average of all values grouped by activity and subject
+			avg_dataset <- final_DF %>%
+    			group_by(activity, subject) %>%
+    			summarise_all(funs(mean))
+    
+			#Write text file with new tidy set for averages
+			write.table(x = avg_dataset, file = "avg_dataset.txt", row.names = FALSE)
